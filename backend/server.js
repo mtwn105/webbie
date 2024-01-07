@@ -5,14 +5,9 @@ const helmet = require("helmet");
 const fileUpload = require("express-fileupload");
 const axios = require("axios").default;
 const { v4: uuidv4 } = require("uuid");
-
-const { Pdf } = require("./schemas");
-
-const connectDB = require("./db");
+const prisma = require("./db");
 
 require("dotenv").config();
-
-connectDB();
 
 const app = express();
 
@@ -36,143 +31,154 @@ app.use(
 app.use(helmet.hidePoweredBy());
 app.use(helmet.xssFilter());
 
-// Download PDF
-app.get("/api/download/:id", async (req, res) => {
-  const { id } = req.params;
+// Create a bot
+app.post("/api/bot", async (req, res, next) => {
+  const { name, openAiKey, slackToken, sourceLink, trainingQuestions } =
+    req.body;
 
-  // Get PDF from DB
-  const pdf = await Pdf.findOne({ fileId: id });
+  // Validate all fields are not null and not empty
+  if (!name || !openAiKey || !slackToken || !sourceLink) {
+    return res.status(400).json({
+      error: "All fields are required",
+    });
+  }
 
-  // Get File
-  const file = `./uploads/${pdf.fileName}`;
+  const botId = uuidv4();
 
-  // Send file
-  res.download(file);
+  const botLink = `${process.env.APP_BASE_URL}/bot/${botId}`;
 
-  // Give Response
-  // res.json({ pdf });
+  const bot = {
+    name,
+    openAiKey,
+    slackToken,
+    sourceLink,
+    botLink,
+    botId,
+  };
+
+  // Save bot to database
+  const savedBot = await prisma.bot.create({
+    data: bot,
+  });
+
+  // Save Training Questions to database
+  if (!!trainingQuestions && trainingQuestions.length > 0) {
+    let trainingQuestionsData = trainingQuestions.map((question) => {
+      return {
+        question,
+        botId: savedBot.id,
+      };
+    });
+
+    trainingQuestionsData = await prisma.questions.createMany({
+      data: trainingQuestionsData,
+    });
+
+    // Create Model
+    const modelName = savedBot.name + "_" + savedBot.id;
+
+    await createModel(modelName, savedBot);
+  }
+
+  // Return the response
+  return res.status(201).json(savedBot);
 });
 
-// Upload PDF
-app.post("/api/upload", async (req, res) => {
+// Ask Question to the bot
+app.post("/api/bot/question/:botId", async (req, res) => {
   try {
-    // Check if files were uploaded
-    if (!req.files || Object.keys(req.files).length === 0) {
-      return res.status(400).send("No files were uploaded.");
+    const { question } = req.body;
+    const { botId } = req.params;
+
+    // Validate all fields are not null and not empty
+    if (!question) {
+      return res.status(400).json({
+        error: "Question is required",
+      });
     }
 
-    // Access the uploaded file
-    const file = req.files.file;
+    // Get bot from database
+    const bot = await prisma.bot.findUnique({
+      where: {
+        botId,
+      },
+    });
 
-    // Generate unique file name
-    const fileId = uuidv4();
-    const fileName = `${fileId}.pdf`;
+    // Check if bot exists or not
+    if (!bot) {
+      return res.status(404).json({
+        error: "Bot not found",
+      });
+    }
 
-    // Move file to folder
-    file.mv(`./uploads/${fileName}`, (err) => {
-      if (err) {
-        console.log(err);
-        res.status(500).send({ error: err.message });
+    // Insert the question to database if not exists already
+    const questionExists = await prisma.questions.findFirst({
+      where: {
+        question,
+      },
+    });
+
+    if (!questionExists) {
+      await prisma.questions.create({
+        data: {
+          question,
+          botId: bot.id,
+        },
+      });
+    }
+
+    // Check if bot is trained or not
+    const modelName = bot.name + "_" + bot.id;
+
+    // Check if model exists or not
+
+    try {
+      const modelExistsQuery = `SELECT * FROM models WHERE name = '${modelName}' AND STATUS = 'complete'`;
+
+      const modelExistsResponse = await axios.post(
+        `${process.env.MINDS_DB_URL}`,
+        {
+          query: modelExistsQuery,
+        }
+      );
+
+      // console.log(modelExistsResponse.data);
+
+      if (modelExistsResponse.data.data.length === 0) {
+        console.log("Model Not Found + " + modelName);
+        await createModel(modelName, savedBot);
+      } else {
+        if (!questionExists) {
+          // Retrain the model
+          await retrainModel(modelName, bot);
+        }
       }
-    });
+    } catch (error) {
+      console.log("Model Not Found + " + modelName);
+      await createModel(modelName, bot);
+    }
 
-    // const { fileName, fileUrl } = req.body;
+    // Get answer from model
+    const modelPredictionQuery = `SELECT answer FROM ${modelName} WHERE question = '${question}'`;
 
-    // Save PDF to DB
-    const pdf = await Pdf.create({
-      fileId,
-      fileName,
-      fileUrl: "abc",
-      content: "abc",
-    });
+    const modelPredictionResponse = await axios.post(
+      `${process.env.MINDS_DB_URL}`,
+      {
+        query: modelPredictionQuery,
+      }
+    );
 
-    pdf.fileUrl = `${process.env.APP_BASE_URL}/api/download/${fileId}`;
-
-    // Scrap PDF Content
-    // const { data } = await axios.post(process.env.MINDS_DB_URL, {
-    //   query: `SELECT text_content FROM my_web.crawler WHERE url = '${pdf.fileUrl}' LIMIT 1`,
-    // });
-
-    const { data } = await axios.post(process.env.MINDS_DB_URL, {
-      query: `SELECT text_content FROM my_web.crawler WHERE url = 'blog.amitwani.dev' LIMIT 1`,
-    });
-
-    const pdfContent = data.data[0][0];
-
-    // Get first 2000 characters
-    // let pdfContentShort = pdfContent.substring(0, 2000);
-
-    // Shorten content for ai
-    let pdfContentShort = pdfContent;
-    pdfContentShort = pdfContentShort.replace(/\n/g, " ");
-    pdfContentShort = pdfContentShort.replace(/\r/g, " ");
-    pdfContentShort = pdfContentShort.replace(/\t/g, " ");
-    pdfContentShort = pdfContentShort.replace(/"/g, "'");
-    pdfContentShort = pdfContentShort.replace(/\\/g, " ");
-    pdfContentShort = pdfContentShort.replace(/`/g, "'");
-    pdfContentShort = pdfContentShort.replace(/%/g, " percent");
-    pdfContentShort = pdfContentShort.replace(/&/g, " and ");
-    pdfContentShort = pdfContentShort.replace(/@/g, " at ");
-    pdfContentShort = pdfContentShort.replace(/#/g, " number ");
-    pdfContentShort = pdfContentShort.replace(/\$/g, " dollar ");
-    pdfContentShort = pdfContentShort.replace(/\*/g, " star ");
-    pdfContentShort = pdfContentShort.replace(/\(/g, " ( ");
-
-    pdfContentShort = pdfContentShort + "    ";
-
-    pdfContentShort = pdfContentShort.replace(/  /g, " ");
-
-    // pdfContentShort = pdfContentShort.substring(0, 2000);
-
-    pdf.content = pdfContentShort;
-
-    await pdf.save();
-
-    // console.log(JSON.stringify(data.data[0]));
-
-    // Give Response
-    res.send({
-      message: "PDF uploaded successfully",
-      pdfId: fileId,
+    // Return the response
+    return res.status(200).json({
+      answer: modelPredictionResponse.data.data[0][0].trim(),
     });
   } catch (error) {
     console.log(error);
-    res.status(500).send({ error: error.message });
+
+    return res.status(500).json({
+      error: "Something went wrong",
+    });
   }
-});
-
-// Get PDF
-app.get("/api/pdf/:id", async (req, res) => {
-  const { id } = req.params;
-
-  // Get PDF from DB
-  const pdf = await Pdf.findById(id);
-
-  // Give Response
-  res.json({ pdf });
-});
-
-// Give Response using MindsDB
-app.post("/api/predict", async (req, res) => {
-  const { pdfId, query } = req.body;
-
-  // Get PDF from DB
-  const pdf = await Pdf.findOne({ fileId: pdfId });
-
-  // Get PDF Content
-  const { content } = pdf;
-
-  // Get Prediction
-  const { data } = await axios.post(process.env.MINDS_DB_URL, {
-    query: `SELECT response FROM pdf_reply WHERE content = "${content}" AND question = "${query}";`,
-  });
-
-  console.log(JSON.stringify(data));
-
-  const prediction = data.data[0][0];
-
-  // Give Response
-  res.json({ prediction });
 });
 
 // Error Handler
@@ -196,3 +202,144 @@ app.use(errorHandler);
 app.listen(port, async () => {
   console.log(`Mindsdb AI Agent server is listening on ${port}`);
 });
+
+async function createModel(modelName, savedBot) {
+  console.log("Starting Model Training");
+
+  // Drop Model
+  await dropModel(modelName);
+
+  try {
+    const modelCreationQuery = `CREATE MODEL ${modelName}
+    FROM psql_datasource
+        (SELECT * FROM questions WHERE "botId" = '${savedBot.id}')
+    PREDICT answer
+    USING
+      engine = 'llamaindex',
+      index_class = 'GPTVectorStoreIndex',
+      reader = 'SimpleWebPageReader',
+      source_url_link = '${savedBot.sourceLink}',
+      input_column = 'question',
+      openai_api_key = '${savedBot.openAiKey}'`;
+
+    console.log("Model Creation Query: " + modelCreationQuery);
+
+    const modelCreationResponse = await axios.post(
+      `${process.env.MINDS_DB_URL}`,
+      {
+        query: modelCreationQuery,
+      }
+    );
+
+    // console.log(modelCreationResponse.data);
+
+    // Check if model is trained completely or not in every 300 ms
+    const modelTrainingStatusQuery = `SELECT STATUS FROM models WHERE name = '${modelName}'`;
+
+    let modelTrainingStatusResponse = await axios.post(
+      `${process.env.MINDS_DB_URL}`,
+      {
+        query: modelTrainingStatusQuery,
+      }
+    );
+
+    console.log(modelTrainingStatusResponse.data);
+
+    while (modelTrainingStatusResponse.data.data[0][0] !== "complete") {
+      modelTrainingStatusResponse = await axios.post(
+        `${process.env.MINDS_DB_URL}`,
+        {
+          query: modelTrainingStatusQuery,
+        }
+      );
+
+      console.log(modelTrainingStatusResponse.data);
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+
+    console.log("Model Trained Successfully");
+  } catch (error) {
+    console.log("Model Training Failed");
+    console.log(error);
+
+    await dropModel(modelName);
+  }
+}
+
+async function retrainModel(modelName, savedBot) {
+  console.log("Starting Model Re-Training");
+
+  try {
+    const modelCreationQuery = `RETRAIN ${modelName}
+    FROM psql_datasource
+        (SELECT * FROM questions WHERE "botId" = '${savedBot.id}')
+    PREDICT answer
+    USING
+      engine = 'llamaindex',
+      index_class = 'GPTVectorStoreIndex',
+      reader = 'SimpleWebPageReader',
+      source_url_link = '${savedBot.sourceLink}',
+      input_column = 'question',
+      openai_api_key = '${savedBot.openAiKey}'`;
+
+    console.log("Model Retrain Query: " + modelCreationQuery);
+
+    const modelCreationResponse = await axios.post(
+      `${process.env.MINDS_DB_URL}`,
+      {
+        query: modelCreationQuery,
+      }
+    );
+
+    // console.log(modelCreationResponse.data);
+
+    // Check if model is trained completely or not in every 300 ms
+    const modelTrainingStatusQuery = `SELECT STATUS FROM models WHERE name = '${modelName}'`;
+
+    let modelTrainingStatusResponse = await axios.post(
+      `${process.env.MINDS_DB_URL}`,
+      {
+        query: modelTrainingStatusQuery,
+      }
+    );
+
+    // console.log(modelTrainingStatusResponse.data);
+
+    while (modelTrainingStatusResponse.data.data[0][0] !== "complete") {
+      modelTrainingStatusResponse = await axios.post(
+        `${process.env.MINDS_DB_URL}`,
+        {
+          query: modelTrainingStatusQuery,
+        }
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+
+    console.log("Model Re-Trained Successfully");
+  } catch (error) {
+    console.log("Model Re-Training Failed");
+    console.log(error);
+
+    await dropModel(modelName);
+  }
+}
+
+async function dropModel(modelName) {
+  try {
+    const modelDeletionQuery = `DROP MODEL ${modelName}`;
+
+    console.log("Model Deletion Query: " + modelDeletionQuery);
+
+    const modelDeletionResponse = await axios.post(
+      `${process.env.MINDS_DB_URL}`,
+      {
+        query: modelDeletionQuery,
+      }
+    );
+  } catch (error) {
+    console.log("Model Deletion Failed");
+    console.log(error);
+  }
+}
