@@ -1,0 +1,66 @@
+<div class="center-div" cds-layout="m:lg" class="content-container">
+  <!-- <p cds-layout="m:lg" cds-text="title">Create the Bot by filling below details</p> -->
+  <!-- <p cds-layout="m:lg" cds-text="message">Get Started by Clicking Below...</p>
+  <button (click)="openCreateBot()" class="big-button" cds-layout="m:lg" class="btn btn-primary">GET STARTED</button> -->
+
+  <div class="login-wrapper">
+    <form class="login">
+      <section class="title">
+        <!-- These could be heading elements. -->
+        <div class="welcome">Create the Bot</div>
+        <div class="hint">by filling below details</div>
+      </section>
+
+
+      <div class="login-group">
+
+        <clr-input-container>
+          <label>Bot Name</label>
+          <input type="text" name="botName" clrInput placeholder="Enter your bot name" [(ngModel)]="bot.name" />
+        </clr-input-container>
+        <clr-input-container>
+          <label>Webpage Link</label>
+          <input type="url" name="sourceLink" clrInput placeholder="Enter the webpage link"
+            [(ngModel)]="bot.sourceLink" />
+        </clr-input-container>
+        <clr-input-container>
+          <label>OpenAI Key</label>
+          <input type="text" name="openAiKey" clrInput placeholder="Enter your OpenAI API Key"
+            [(ngModel)]="bot.openAiKey" />
+        </clr-input-container>
+
+        <button (click)="createBot()" class="btn btn-primary">Create the Bot</button>
+
+      </div>
+      <section class="title">
+        <div *ngIf="success" class="alert alert-success" role="alert">
+          <div class="alert-items">
+            <div class="alert-item static">
+              <div class="alert-icon-wrapper">
+                <cds-icon class="alert-icon" shape="check-circle"></cds-icon>
+              </div>
+              <span class="alert-text">Bot is sucessfully created. Bot is live at
+                <a target="_blank" href="{{successBotLink}}">{{successBotLink}}</a>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="error" class="alert alert-danger" role="alert">
+          <div class="alert-items">
+            <div class="alert-item static">
+              <div class="alert-icon-wrapper">
+                <cds-icon class="alert-icon" shape="exclamation-circle"></cds-icon>
+              </div>
+              <span class="alert-text">{{errorMessage}}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </form>
+
+
+
+
+  </div>
+
+</div>

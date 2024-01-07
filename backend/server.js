@@ -36,7 +36,7 @@ app.post("/api/bot", async (req, res, next) => {
   const { name, openAiKey, slackToken, sourceLink } = req.body;
 
   // Validate all fields are not null and not empty
-  if (!name || !openAiKey || !slackToken || !sourceLink) {
+  if (!name || !openAiKey || !sourceLink) {
     return res.status(400).json({
       error: "All fields are required",
     });
@@ -47,18 +47,33 @@ app.post("/api/bot", async (req, res, next) => {
   const botLink = `${process.env.APP_BASE_URL}/bot/${botId}`;
 
   const bot = {
-    name,
-    openAiKey,
-    slackToken,
-    sourceLink,
+    name: name.trim().toLowerCase(),
+    openAiKey: openAiKey.trim(),
+    slackToken: slackToken ? slackToken.trim() : "",
+    sourceLink: sourceLink.trim(),
     botLink,
     botId,
   };
+
+  // If bot name, api key and sourceLink already exists then return that bot
+  const existingBot = await prisma.bot.findFirst({
+    where: {
+      name: bot.name,
+      openAiKey: bot.openAiKey,
+      sourceLink: bot.sourceLink,
+    },
+  });
+
+  if (existingBot) {
+    return res.status(200).json(existingBot);
+  }
 
   // Save bot to database
   const savedBot = await prisma.bot.create({
     data: bot,
   });
+
+  const modelName = savedBot.name + "_" + savedBot.id;
 
   // Create and Train the model
   const modelTrainSuccessfully = await createModel(modelName, savedBot);
@@ -72,6 +87,36 @@ app.post("/api/bot", async (req, res, next) => {
 
   // Return the response
   return res.status(201).json(savedBot);
+});
+
+// Fetch bot
+app.get("/api/bot/:botId", async (req, res) => {
+  try {
+    const { botId } = req.params;
+
+    // Get bot from database
+    const bot = await prisma.bot.findUnique({
+      where: {
+        botId,
+      },
+    });
+
+    // Check if bot exists or not
+    if (!bot) {
+      return res.status(404).json({
+        error: "Bot not found",
+      });
+    }
+
+    // Return the response
+    return res.status(200).json(bot);
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
 });
 
 // Ask Question to the bot
@@ -123,6 +168,8 @@ app.post("/api/bot/question/:botId", async (req, res) => {
       if (modelExistsResponse.data.data.length === 0) {
         console.log("Model Not Found + " + modelName);
         modelTrainSuccessfully = await createModel(modelName, savedBot);
+      } else {
+        modelTrainSuccessfully = true;
       }
     } catch (error) {
       console.log("Model Not Found + " + modelName);
@@ -219,7 +266,7 @@ async function createModel(modelName, savedBot) {
       }
     );
 
-    // console.log(modelTrainingStatusResponse.data);
+    console.log(modelTrainingStatusResponse.data);
 
     let time = 0;
 

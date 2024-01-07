@@ -1,0 +1,43 @@
+<div class="center-div" cds-layout="m:lg" class="content-container">
+
+  <div class="title">
+    <!-- These could be heading elements. -->
+    <p cds-layout="m:lg" cds-text="headline">{{bot.name}}</p>
+    <p cds-layout="m:lg" cds-text="message">Start Asking Questions</p>
+  </div>
+
+
+  <div id="chat-div" class="chat-div">
+    <div *ngFor="let message of conversation" class="chat-message">
+      <div *ngIf="message.type == 'bot'" class="chat-message-bot">
+        <div class="alert alert-info" role="alert">
+          <div class="alert-items">
+            <div class="alert-item static">
+              <span class="alert-text">{{message.text}}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div *ngIf="message.type == 'user'" class="chat-message-user">
+        <div class="alert alert-warning" role="alert">
+          <div class="alert-items">
+            <div class="alert-item static">
+              <span class="alert-text">{{message.text}}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-input">
+    <!-- inline input and button -->
+
+    <input clrInput type="text" name="question" clrInput placeholder="Enter your question" [(ngModel)]="question" />
+    <button (click)="askQuestion()" class="btn btn-primary">Ask</button>
+
+  </div>
+
+</div>
