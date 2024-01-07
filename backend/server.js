@@ -33,8 +33,7 @@ app.use(helmet.xssFilter());
 
 // Create a bot
 app.post("/api/bot", async (req, res, next) => {
-  const { name, openAiKey, slackToken, sourceLink, trainingQuestions } =
-    req.body;
+  const { name, openAiKey, slackToken, sourceLink } = req.body;
 
   // Validate all fields are not null and not empty
   if (!name || !openAiKey || !slackToken || !sourceLink) {
@@ -61,23 +60,14 @@ app.post("/api/bot", async (req, res, next) => {
     data: bot,
   });
 
-  // Save Training Questions to database
-  if (!!trainingQuestions && trainingQuestions.length > 0) {
-    let trainingQuestionsData = trainingQuestions.map((question) => {
-      return {
-        question,
-        botId: savedBot.id,
-      };
+  // Create and Train the model
+  const modelTrainSuccessfully = await createModel(modelName, savedBot);
+
+  if (!modelTrainSuccessfully) {
+    console.error("Model Not Trained");
+    return res.status(500).json({
+      error: "Something went wrong",
     });
-
-    trainingQuestionsData = await prisma.questions.createMany({
-      data: trainingQuestionsData,
-    });
-
-    // Create Model
-    const modelName = savedBot.name + "_" + savedBot.id;
-
-    await createModel(modelName, savedBot);
   }
 
   // Return the response
@@ -111,22 +101,6 @@ app.post("/api/bot/question/:botId", async (req, res) => {
       });
     }
 
-    // Insert the question to database if not exists already
-    const questionExists = await prisma.questions.findFirst({
-      where: {
-        question,
-      },
-    });
-
-    if (!questionExists) {
-      await prisma.questions.create({
-        data: {
-          question,
-          botId: bot.id,
-        },
-      });
-    }
-
     let modelTrainSuccessfully = false;
 
     // Check if bot is trained or not
@@ -149,13 +123,6 @@ app.post("/api/bot/question/:botId", async (req, res) => {
       if (modelExistsResponse.data.data.length === 0) {
         console.log("Model Not Found + " + modelName);
         modelTrainSuccessfully = await createModel(modelName, savedBot);
-      } else {
-        if (!questionExists) {
-          // Retrain the model
-          modelTrainSuccessfully = await retrainModel(modelName, bot);
-        } else {
-          modelTrainSuccessfully = true;
-        }
       }
     } catch (error) {
       console.log("Model Not Found + " + modelName);
@@ -222,8 +189,6 @@ async function createModel(modelName, savedBot) {
 
   try {
     const modelCreationQuery = `CREATE MODEL ${modelName}
-    FROM psql_datasource
-        (SELECT * FROM questions WHERE "botId" = '${savedBot.id}')
     PREDICT answer
     USING
       engine = 'llamaindex',
@@ -283,79 +248,6 @@ async function createModel(modelName, savedBot) {
     return true;
   } catch (error) {
     console.log("Model Training Failed");
-    console.log(error);
-
-    await dropModel(modelName);
-    return false;
-  }
-}
-
-async function retrainModel(modelName, savedBot) {
-  console.log("Starting Model Re-Training");
-
-  try {
-    const modelCreationQuery = `RETRAIN ${modelName}
-    FROM psql_datasource
-        (SELECT * FROM questions WHERE "botId" = '${savedBot.id}')
-    PREDICT answer
-    USING
-      engine = 'llamaindex',
-      index_class = 'GPTVectorStoreIndex',
-      reader = 'SimpleWebPageReader',
-      source_url_link = '${savedBot.sourceLink}',
-      input_column = 'question',
-      openai_api_key = '${savedBot.openAiKey}'`;
-
-    console.log("Model Retrain Query: " + modelCreationQuery);
-
-    const modelCreationResponse = await axios.post(
-      `${process.env.MINDS_DB_URL}`,
-      {
-        query: modelCreationQuery,
-      }
-    );
-
-    // console.log(modelCreationResponse.data);
-
-    // Check if model is trained completely or not in every 300 ms
-    const modelTrainingStatusQuery = `SELECT STATUS FROM models WHERE name = '${modelName}'`;
-
-    let modelTrainingStatusResponse = await axios.post(
-      `${process.env.MINDS_DB_URL}`,
-      {
-        query: modelTrainingStatusQuery,
-      }
-    );
-
-    // console.log(modelTrainingStatusResponse.data);
-
-    let time = 0;
-
-    while (modelTrainingStatusResponse.data.data[0][0] !== "complete") {
-      modelTrainingStatusResponse = await axios.post(
-        `${process.env.MINDS_DB_URL}`,
-        {
-          query: modelTrainingStatusQuery,
-        }
-      );
-
-      // console.log(modelTrainingStatusResponse.data);
-
-      // if its more than 1 minute and model is still not trained then drop the model and return
-      if (time > 60000) {
-        console.log("Model Training Failed");
-        await dropModel(modelName);
-        return false;
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      time += 300;
-    }
-
-    console.log("Model Re-Trained Successfully");
-    return true;
-  } catch (error) {
-    console.log("Model Re-Training Failed");
     console.log(error);
 
     await dropModel(modelName);
