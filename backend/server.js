@@ -127,6 +127,8 @@ app.post("/api/bot/question/:botId", async (req, res) => {
       });
     }
 
+    let modelTrainSuccessfully = false;
+
     // Check if bot is trained or not
     const modelName = bot.name + "_" + bot.id;
 
@@ -146,16 +148,25 @@ app.post("/api/bot/question/:botId", async (req, res) => {
 
       if (modelExistsResponse.data.data.length === 0) {
         console.log("Model Not Found + " + modelName);
-        await createModel(modelName, savedBot);
+        modelTrainSuccessfully = await createModel(modelName, savedBot);
       } else {
         if (!questionExists) {
           // Retrain the model
-          await retrainModel(modelName, bot);
+          modelTrainSuccessfully = await retrainModel(modelName, bot);
+        } else {
+          modelTrainSuccessfully = true;
         }
       }
     } catch (error) {
       console.log("Model Not Found + " + modelName);
-      await createModel(modelName, bot);
+      modelTrainSuccessfully = await createModel(modelName, bot);
+    }
+
+    if (!modelTrainSuccessfully) {
+      console.error("Model Not Trained");
+      return res.status(500).json({
+        error: "Something went wrong",
+      });
     }
 
     // Get answer from model
@@ -243,7 +254,9 @@ async function createModel(modelName, savedBot) {
       }
     );
 
-    console.log(modelTrainingStatusResponse.data);
+    // console.log(modelTrainingStatusResponse.data);
+
+    let time = 0;
 
     while (modelTrainingStatusResponse.data.data[0][0] !== "complete") {
       modelTrainingStatusResponse = await axios.post(
@@ -253,17 +266,27 @@ async function createModel(modelName, savedBot) {
         }
       );
 
-      console.log(modelTrainingStatusResponse.data);
+      // console.log(modelTrainingStatusResponse.data);
+
+      // if its more than 1 minute and model is still not trained then drop the model and return
+      if (time > 60000) {
+        console.log("Model Training Failed");
+        await dropModel(modelName);
+        return false;
+      }
 
       await new Promise((resolve) => setTimeout(resolve, 300));
+      time += 300;
     }
 
     console.log("Model Trained Successfully");
+    return true;
   } catch (error) {
     console.log("Model Training Failed");
     console.log(error);
 
     await dropModel(modelName);
+    return false;
   }
 }
 
@@ -306,6 +329,8 @@ async function retrainModel(modelName, savedBot) {
 
     // console.log(modelTrainingStatusResponse.data);
 
+    let time = 0;
+
     while (modelTrainingStatusResponse.data.data[0][0] !== "complete") {
       modelTrainingStatusResponse = await axios.post(
         `${process.env.MINDS_DB_URL}`,
@@ -314,15 +339,27 @@ async function retrainModel(modelName, savedBot) {
         }
       );
 
+      // console.log(modelTrainingStatusResponse.data);
+
+      // if its more than 1 minute and model is still not trained then drop the model and return
+      if (time > 60000) {
+        console.log("Model Training Failed");
+        await dropModel(modelName);
+        return false;
+      }
+
       await new Promise((resolve) => setTimeout(resolve, 300));
+      time += 300;
     }
 
     console.log("Model Re-Trained Successfully");
+    return true;
   } catch (error) {
     console.log("Model Re-Training Failed");
     console.log(error);
 
     await dropModel(modelName);
+    return false;
   }
 }
 
