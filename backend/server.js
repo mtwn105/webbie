@@ -167,42 +167,39 @@ app.post("/api/bot/question/:botId", async (req, res) => {
       });
     }
 
-    let modelTrainSuccessfully = false;
-
-    // Check if bot is trained or not
     const modelName = bot.name + "_" + bot.botId;
 
-    // Check if model exists or not
+    // // Check if model exists or not
 
-    try {
-      const modelExistsQuery = `SELECT * FROM models WHERE name = '${modelName}' AND STATUS = 'complete'`;
+    // try {
+    //   const modelExistsQuery = `SELECT * FROM models WHERE name = '${modelName}' AND STATUS = 'complete'`;
 
-      const modelExistsResponse = await axios.post(
-        `${process.env.MINDS_DB_URL}`,
-        {
-          query: modelExistsQuery,
-        }
-      );
+    //   const modelExistsResponse = await axios.post(
+    //     `${process.env.MINDS_DB_URL}`,
+    //     {
+    //       query: modelExistsQuery,
+    //     }
+    //   );
 
-      // console.log(modelExistsResponse.data);
+    //   // console.log(modelExistsResponse.data);
 
-      if (modelExistsResponse.data.data.length === 0) {
-        console.log("Model Not Found + " + modelName);
-        modelTrainSuccessfully = await createModel(modelName, savedBot);
-      } else {
-        modelTrainSuccessfully = true;
-      }
-    } catch (error) {
-      console.log("Model Not Found + " + modelName);
-      modelTrainSuccessfully = await createModel(modelName, bot);
-    }
+    //   if (modelExistsResponse.data.data.length === 0) {
+    //     console.log("Model Not Found + " + modelName);
+    //     modelTrainSuccessfully = await createModel(modelName, savedBot);
+    //   } else {
+    //     modelTrainSuccessfully = true;
+    //   }
+    // } catch (error) {
+    //   console.log("Model Not Found + " + modelName);
+    //   modelTrainSuccessfully = await createModel(modelName, bot);
+    // }
 
-    if (!modelTrainSuccessfully) {
-      console.error("Model Not Trained");
-      return res.status(500).json({
-        error: "Something went wrong",
-      });
-    }
+    // if (!modelTrainSuccessfully) {
+    //   console.error("Model Not Trained");
+    //   return res.status(500).json({
+    //     error: "Something went wrong",
+    //   });
+    // }
 
     // Get answer from model
     const modelPredictionQuery = `SELECT answer FROM ${modelName} WHERE question = '${question}'`;
@@ -214,9 +211,24 @@ app.post("/api/bot/question/:botId", async (req, res) => {
       }
     );
 
+    const answer = modelPredictionResponse.data.data[0][0].trim();
+
+    // save transcript
+    try {
+      await prisma.transcript.create({
+        data: {
+          question,
+          answer,
+          botId,
+        },
+      });
+    } catch (error) {
+      console.log(error);
+    }
+
     // Return the response
     return res.status(200).json({
-      answer: modelPredictionResponse.data.data[0][0].trim(),
+      answer,
     });
   } catch (error) {
     console.log(error);

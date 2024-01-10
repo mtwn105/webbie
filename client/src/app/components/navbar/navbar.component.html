@@ -1,4 +1,4 @@
-<header class="header-6">
+<header *ngIf="!router.url.includes('bot')" class="header-6">
   <div class="branding">
     <a href="/" class="nav-link">
       <cds-icon shape="chat-bubble" badge="info"></cds-icon>

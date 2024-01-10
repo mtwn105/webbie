@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import '@cds/core/icon/register.js';
 import { ClarityIcons, chatBubbleIcon } from '@cds/core/icon';
+import { Router } from '@angular/router';
 
 ClarityIcons.addIcons(chatBubbleIcon);
 
@@ -12,5 +13,9 @@ ClarityIcons.addIcons(chatBubbleIcon);
   styleUrls: ['./navbar.component.scss']
 })
 export class NavbarComponent {
+
+  constructor(
+    public router: Router
+  ) { }
 
 }

@@ -1,12 +1,19 @@
 <div class="center-div" cds-layout="m:lg" class="content-container">
 
-  <div class="title">
-    <!-- These could be heading elements. -->
-    <p cds-layout="m:lg" cds-text="headline">{{bot.name}}</p>
-    <p cds-layout="m:lg" cds-text="message">{{bot.description}}</p>
+  <div fxLaylout="row" fxLayoutGap="10px" fxLayoutAlign="space-between center" class="chat-header">
+
+    <div class="title">
+      <!-- These could be heading elements. -->
+      <p cds-layout="m:lg" cds-text="headline">{{bot.name}}</p>
+      <p cds-layout="m:lg" cds-text="message">{{bot.description}}</p>
+    </div>
+    <div class="title">
+      <button (click)="share()" class="btn btn-primary">
+        <cds-icon shape="pop-out"></cds-icon>
+        Share
+      </button>
+    </div>
   </div>
-
-
   <div id="chat-div" class="chat-div">
     <ng-container *ngIf="!conversation || conversation.length == 0">
 
@@ -34,6 +41,16 @@
       </div>
       <div *ngIf="message.type == 'user'" class="chat-message-user">
         <div class="alert alert-warning" role="alert">
+          <div class="alert-items">
+            <div class="alert-item static">
+              <span class="alert-text">{{message.text}}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div *ngIf="message.type == 'error'" class="chat-message-user">
+        <div class="alert alert-danger" role="alert">
           <div class="alert-items">
             <div class="alert-item static">
               <span class="alert-text">{{message.text}}

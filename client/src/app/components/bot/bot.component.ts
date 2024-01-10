@@ -71,13 +71,35 @@ export class BotComponent implements OnInit {
         }
       }, 100);
 
+    }, (error: any) => {
+      console.log(error);
+      this.conversation.push({
+        type: 'error',
+        text: 'Sorry, I am not able to answer this question. Please try again later.'
+      });
     });
+
 
   }
 
   checkEnter(event: any) {
     if (event.keyCode === 13) {
       this.askQuestion();
+    }
+  }
+
+  share() {
+    if (navigator.share) {
+      navigator.share({
+        title: 'Bot: ' + this.bot.name,
+        text: 'Check out this bot: ' + this.bot.name,
+        url: window.location.href
+      }).then(() => {
+        console.log('Thanks for sharing!');
+      })
+        .catch(console.error);
+    } else {
+      console.log('web share not supported');
     }
   }
 
