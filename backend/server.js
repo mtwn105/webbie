@@ -33,21 +33,24 @@ app.use(helmet.xssFilter());
 
 // Create a bot
 app.post("/api/bot", async (req, res, next) => {
-  const { name, openAiKey, slackToken, sourceLink } = req.body;
+  const { name, description, openAiKey, slackToken, sourceLink } = req.body;
 
   // Validate all fields are not null and not empty
-  if (!name || !openAiKey || !sourceLink) {
+  if (!name || !description || !openAiKey || !sourceLink) {
     return res.status(400).json({
       error: "All fields are required",
     });
   }
 
-  const botId = uuidv4();
+  let botId = uuidv4();
+
+  botId = botId.replace(/-/g, "_");
 
   const botLink = `${process.env.APP_BASE_URL}/bot/${botId}`;
 
   const bot = {
     name: name.trim().toLowerCase(),
+    description: description.trim().toLowerCase(),
     openAiKey: openAiKey.trim(),
     slackToken: slackToken ? slackToken.trim() : "",
     sourceLink: sourceLink.trim(),
@@ -65,18 +68,19 @@ app.post("/api/bot", async (req, res, next) => {
   });
 
   if (existingBot) {
-    return res.status(200).json(existingBot);
+    return res.status(200).json({
+      name: existingBot.name,
+      description: existingBot.description,
+      botId: existingBot.botId,
+      botLink: existingBot.botLink,
+      sourceLink: existingBot.sourceLink,
+    });
   }
 
-  // Save bot to database
-  const savedBot = await prisma.bot.create({
-    data: bot,
-  });
-
-  const modelName = savedBot.name + "_" + savedBot.id;
+  const modelName = bot.name + "_" + bot.botId;
 
   // Create and Train the model
-  const modelTrainSuccessfully = await createModel(modelName, savedBot);
+  const modelTrainSuccessfully = await createModel(modelName, bot);
 
   if (!modelTrainSuccessfully) {
     console.error("Model Not Trained");
@@ -85,8 +89,19 @@ app.post("/api/bot", async (req, res, next) => {
     });
   }
 
+  // Save bot to database
+  const savedBot = await prisma.bot.create({
+    data: bot,
+  });
+
   // Return the response
-  return res.status(201).json(savedBot);
+  return res.status(201).json({
+    name: savedBot.name,
+    description: savedBot.description,
+    botId: savedBot.botId,
+    botLink: savedBot.botLink,
+    sourceLink: savedBot.sourceLink,
+  });
 });
 
 // Fetch bot
@@ -109,7 +124,13 @@ app.get("/api/bot/:botId", async (req, res) => {
     }
 
     // Return the response
-    return res.status(200).json(bot);
+    return res.status(200).json({
+      name: bot.name,
+      description: bot.description,
+      botId: bot.botId,
+      botLink: bot.botLink,
+      sourceLink: bot.sourceLink,
+    });
   } catch (error) {
     console.log(error);
 
@@ -149,7 +170,7 @@ app.post("/api/bot/question/:botId", async (req, res) => {
     let modelTrainSuccessfully = false;
 
     // Check if bot is trained or not
-    const modelName = bot.name + "_" + bot.id;
+    const modelName = bot.name + "_" + bot.botId;
 
     // Check if model exists or not
 
@@ -228,7 +249,7 @@ app.listen(port, async () => {
   console.log(`Mindsdb AI Agent server is listening on ${port}`);
 });
 
-async function createModel(modelName, savedBot) {
+async function createModel(modelName, bot) {
   console.log("Starting Model Training");
 
   // Drop Model
@@ -241,9 +262,10 @@ async function createModel(modelName, savedBot) {
       engine = 'llamaindex',
       index_class = 'GPTVectorStoreIndex',
       reader = 'SimpleWebPageReader',
-      source_url_link = '${savedBot.sourceLink}',
+      source_url_link = '${bot.sourceLink}',
       input_column = 'question',
-      openai_api_key = '${savedBot.openAiKey}'`;
+      openai_api_key = '${bot.openAiKey}',
+      model_name = 'gpt-3.5-turbo-instruct'`;
 
     console.log("Model Creation Query: " + modelCreationQuery);
 

@@ -12,6 +12,7 @@ import { BotComponent } from './components/bot/bot.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { CreateABotComponent } from './components/create-a-bot/create-a-bot.component';
 import { HomeComponent } from './components/home/home.component';
+import { FlexLayoutModule } from '@angular/flex-layout';
 
 @NgModule({
   declarations: [
@@ -29,6 +30,7 @@ import { HomeComponent } from './components/home/home.component';
     FormsModule,
     HttpClientModule,
     ClarityModule,
+    FlexLayoutModule
   ],
   providers: [],
   bootstrap: [AppComponent]

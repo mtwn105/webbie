@@ -3,11 +3,24 @@
   <div class="title">
     <!-- These could be heading elements. -->
     <p cds-layout="m:lg" cds-text="headline">{{bot.name}}</p>
-    <p cds-layout="m:lg" cds-text="message">Start Asking Questions</p>
+    <p cds-layout="m:lg" cds-text="message">{{bot.description}}</p>
   </div>
 
 
   <div id="chat-div" class="chat-div">
+    <ng-container *ngIf="!conversation || conversation.length == 0">
+
+      <div class="center-div">
+        <p cds-layout="m:lg" cds-text="headline">Start Asking Questions</p>
+
+      </div>
+      <!-- center the p
+      <p cds-layout="m:lg" cds-text="body">Welcome to {{bot.name}}</p>
+      <p cds-layout="m:lg" cds-text="body">I am {{bot.name}}. I am here to answer your questions.</p>
+      <p cds-layout="m:lg" cds-text="body">I am trained on {{bot.description}}</p> -->
+
+
+    </ng-container>
     <div *ngFor="let message of conversation" class="chat-message">
       <div *ngIf="message.type == 'bot'" class="chat-message-bot">
         <div class="alert alert-info" role="alert">
@@ -32,12 +45,17 @@
     </div>
   </div>
 
-  <div class="chat-input">
+  <div fxLayout="row" fxLayoutGap="10px" class="chat-input container">
     <!-- inline input and button -->
-
-    <input clrInput type="text" name="question" clrInput placeholder="Enter your question" [(ngModel)]="question" />
-    <button (click)="askQuestion()" class="btn btn-primary">Ask</button>
-
+    <div fxFlex="grow">
+      <input (keydown)="checkEnter($event)" id="question" clrInput type="text" name="question" clrInput
+        placeholder="Enter your question" [(ngModel)]="question" />
+    </div>
+    <div fxLayoutAlign="center">
+      <button (click)="askQuestion()" class="btn btn-primary">
+        <cds-icon shape="pop-out"></cds-icon>
+      </button>
+    </div>
   </div>
 
 </div>

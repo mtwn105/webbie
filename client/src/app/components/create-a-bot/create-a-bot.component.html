@@ -19,6 +19,11 @@
           <input type="text" name="botName" clrInput placeholder="Enter your bot name" [(ngModel)]="bot.name" />
         </clr-input-container>
         <clr-input-container>
+          <label>Bot Description</label>
+          <input type="text" name="botDescription" clrInput placeholder="Enter one line bot description"
+            [(ngModel)]="bot.description" />
+        </clr-input-container>
+        <clr-input-container>
           <label>Webpage Link</label>
           <input type="url" name="sourceLink" clrInput placeholder="Enter the webpage link"
             [(ngModel)]="bot.sourceLink" />
@@ -28,8 +33,21 @@
           <input type="text" name="openAiKey" clrInput placeholder="Enter your OpenAI API Key"
             [(ngModel)]="bot.openAiKey" />
         </clr-input-container>
+        <!-- Check box to receive notifications on slack channel - enter slack token -->
 
-        <button (click)="createBot()" class="btn btn-primary">Create the Bot</button>
+        <clr-toggle-container>
+          <label>Enable Notifications in Slack Channel</label>
+          <clr-toggle-wrapper>
+            <input type="checkbox" clrToggle [(ngModel)]="slackNotification" name="slackNotification" />
+          </clr-toggle-wrapper>
+        </clr-toggle-container>
+
+        <clr-input-container *ngIf="slackNotification">
+          <label>Slack Token</label>
+          <input type="text" name="slackToken" clrInput placeholder="Enter your Slack Token"
+            [(ngModel)]="bot.slackToken" />
+        </clr-input-container>
+        <button [clrLoading]="validateBtnState" (click)="createBot()" class="btn btn-primary">Create the Bot</button>
 
       </div>
       <section class="title">

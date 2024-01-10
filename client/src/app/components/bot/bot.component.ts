@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { BotService } from 'src/app/services/bot.service';
+import { ClarityIcons, popOutIcon } from '@cds/core/icon';
+
+ClarityIcons.addIcons(popOutIcon);
 
 @Component({
   selector: 'app-bot',
@@ -31,11 +34,16 @@ export class BotComponent implements OnInit {
   }
 
   askQuestion() {
-    console.log(this.question);
+
+    const question = this.question;
+
+    this.question = ''
+
+    console.log(question);
 
     this.conversation.push({
       type: 'user',
-      text: this.question
+      text: question
     });
 
     // scroll to bottom
@@ -46,9 +54,7 @@ export class BotComponent implements OnInit {
       }
     }, 100);
 
-    this.botService.askQuestion(this.botId, this.question).subscribe((response: any) => {
-
-      this.question = ''
+    this.botService.askQuestion(this.botId, question).subscribe((response: any) => {
 
       console.log(response);
 
@@ -67,6 +73,12 @@ export class BotComponent implements OnInit {
 
     });
 
+  }
+
+  checkEnter(event: any) {
+    if (event.keyCode === 13) {
+      this.askQuestion();
+    }
   }
 
 }
