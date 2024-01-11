@@ -16,11 +16,14 @@ COPY . .
 # Build the Angular app for production
 RUN npm run ng build --configuration=production
 
-# Use Nginx as the web server
-FROM nginx
+# Use NGINX as the base image for the production environment
+FROM nginx:alpine
 
 # Copy the built Angular app to the Nginx default public directory
-COPY --from=0 /app/dist /usr/share/nginx/html
+COPY --from=0 /app/dist/client /usr/share/nginx/html
+
+# Copy the NGINX configuration file
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
 
 # Expose the port that the Angular app will run on
 EXPOSE 80
