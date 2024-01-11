@@ -8,3 +8,5 @@ services:
       - MINDS_DB_URL="http://localhost:47334/api/sql/query"
       - APP_BASE_URL="..."
       - DATABASE_URL="..."
+    ports:
+      - "3000:3000"
