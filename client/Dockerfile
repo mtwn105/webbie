@@ -1,5 +1,5 @@
 # Use the official Node.js 16 image as the base image
-FROM node:16
+FROM node:16 AS build
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -17,13 +17,13 @@ COPY . .
 RUN npm run ng build --configuration=production
 
 # Use NGINX as the base image for the production environment
-FROM nginx:alpine
+FROM nginx
+
+RUN rm /etc/nginx/conf.d/default.conf
+COPY --from=build nginx/nginx.conf /etc/nginx/conf.d
 
 # Copy the built Angular app to the Nginx default public directory
-COPY --from=0 /app/dist/client /usr/share/nginx/html
-
-# Copy the NGINX configuration file
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
+COPY --from=build /app/dist/client /usr/share/nginx/html
 
 # Expose the port that the Angular app will run on
 EXPOSE 80
