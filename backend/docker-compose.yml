@@ -1,0 +1,10 @@
+version: "3"
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - MINDS_DB_URL="http://localhost:47334/api/sql/query"
+      - APP_BASE_URL="..."
+      - DATABASE_URL="..."
