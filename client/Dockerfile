@@ -20,7 +20,7 @@ RUN npm run ng build --configuration=production
 FROM nginx
 
 RUN rm /etc/nginx/conf.d/default.conf
-COPY --from=build nginx/nginx.conf /etc/nginx/conf.d
+COPY --from=build /app/nginx/nginx.conf /etc/nginx/conf.d
 
 # Copy the built Angular app to the Nginx default public directory
 COPY --from=build /app/dist/client /usr/share/nginx/html
