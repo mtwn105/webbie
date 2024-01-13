@@ -87,6 +87,11 @@
           <input type="text" name="slackToken" clrInput placeholder="Enter your Slack Token"
             [(ngModel)]="bot.slackToken" />
         </clr-input-container>
+        <clr-input-container *ngIf="slackNotification">
+          <label>Slack Channel Name</label>
+          <input type="text" name="slackChannel" clrInput placeholder="Enter your Slack Channel Name"
+            [(ngModel)]="bot.slackChannel" />
+        </clr-input-container>
         <button [clrLoading]="validateBtnState" (click)="createBot()" class="btn btn-primary">Create the Bot</button>
 
       </div>

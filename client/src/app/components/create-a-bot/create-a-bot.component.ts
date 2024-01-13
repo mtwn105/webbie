@@ -17,6 +17,7 @@ export class CreateABotComponent {
     sourceLink: string,
     openAiKey: string,
     slackToken: string,
+    slackChannel: string,
     dataSource: string,
     textData: string,
   } = {
@@ -25,6 +26,7 @@ export class CreateABotComponent {
       sourceLink: '',
       openAiKey: '',
       slackToken: '',
+      slackChannel: '',
       textData: '',
       dataSource: 'WEB'
     }
@@ -61,6 +63,7 @@ export class CreateABotComponent {
 
     if (!this.slackNotification) {
       this.bot.slackToken = '';
+      this.bot.slackChannel = '';
     }
 
     if (this.bot.dataSource === 'WEB') {

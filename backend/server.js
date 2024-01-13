@@ -34,8 +34,15 @@ app.use(helmet.xssFilter());
 
 // Create a bot
 app.post("/api/bot", async (req, res, next) => {
-  const { name, description, openAiKey, slackToken, dataSource, sourceLink } =
-    req.body;
+  const {
+    name,
+    description,
+    openAiKey,
+    slackToken,
+    slackChannel,
+    dataSource,
+    sourceLink,
+  } = req.body;
 
   // Validate all fields are not null and not empty
   if (!name || !description || !openAiKey || !dataSource || !sourceLink) {
@@ -55,6 +62,7 @@ app.post("/api/bot", async (req, res, next) => {
     description: description.trim().toLowerCase(),
     openAiKey: openAiKey.trim(),
     slackToken: slackToken ? slackToken.trim() : "",
+    slackChannel: slackChannel ? slackChannel.trim() : "",
     sourceLink: sourceLink.trim(),
     dataSource,
     botLink,
@@ -96,6 +104,11 @@ app.post("/api/bot", async (req, res, next) => {
     });
   }
 
+  // Create Slack Connection
+  if (bot.slackToken && bot.slackToken.length > 0) {
+    await createSlack(bot);
+  }
+
   // Save bot to database
   const savedBot = await prisma.bot.create({
     data: {
@@ -103,6 +116,7 @@ app.post("/api/bot", async (req, res, next) => {
       description: bot.description,
       openAiKey: bot.openAiKey,
       slackToken: bot.slackToken,
+      slackChannel: bot.slackChannel,
       sourceLink: bot.sourceLink,
       botLink: bot.botLink,
       botId: bot.botId,
@@ -227,6 +241,13 @@ app.post("/api/bot/question/:botId", async (req, res) => {
     );
 
     const answer = modelPredictionResponse.data.data[0][0].trim();
+
+    // Send slack notification in channel
+    if (bot.slackToken && bot.slackToken.length > 0) {
+      const message = `A Question was asked to the bot - \n\n${bot.name}: \n\nQuestion: ${question} \n\nAnswer: ${answer}`;
+
+      await sendSlackMessageInChannel(bot, message);
+    }
 
     // save transcript
     try {
@@ -448,6 +469,57 @@ async function dropModel(modelName) {
     );
   } catch (error) {
     console.log("Model Deletion Failed");
+    console.log(error);
+  }
+}
+
+async function createSlack(bot) {
+  console.log("Creating Slack Connection");
+
+  try {
+    const createSlackChannelQuery = `CREATE DATABASE slack_${bot.botId}
+WITH
+  ENGINE = 'slack',
+  PARAMETERS = {
+      "token": "${bot.slackToken}"
+    };`;
+
+    console.log("Creating Slack Query: " + createSlackChannelQuery);
+
+    const createSlackResponse = await axios.post(
+      `${process.env.MINDS_DB_URL}`,
+      {
+        query: createSlackChannelQuery,
+      }
+    );
+
+    console.log(createSlackResponse.data);
+    console.log("Created Slack Successfully");
+  } catch (error) {
+    console.log("Created Slack Failed");
+    console.log(error);
+  }
+}
+
+async function sendSlackMessageInChannel(bot, message) {
+  console.log("Sending Slack Message");
+
+  try {
+    const sendingSlackMessageQuery = `INSERT INTO slack_${bot.botId}.channels (channel, text) VALUES ("${bot.slackChannel}", "${message}");`;
+
+    console.log("Sending Slack Query: " + sendingSlackMessageQuery);
+
+    const sendingSlackMessageResponse = await axios.post(
+      `${process.env.MINDS_DB_URL}`,
+      {
+        query: sendingSlackMessageQuery,
+      }
+    );
+
+    console.log(sendingSlackMessageResponse.data);
+    console.log("Sending Slack Successfully");
+  } catch (error) {
+    console.log("Sending Slack Failed");
     console.log(error);
   }
 }
