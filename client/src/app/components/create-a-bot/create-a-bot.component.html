@@ -1,11 +1,11 @@
-<div class="center-div" cds-layout="m:lg" class="content-container">
+<div class="center-div" class="content-container">
   <!-- <p cds-layout="m:lg" cds-text="title">Create the Bot by filling below details</p> -->
   <!-- <p cds-layout="m:lg" cds-text="message">Get Started by Clicking Below...</p>
   <button (click)="openCreateBot()" class="big-button" cds-layout="m:lg" class="btn btn-primary">GET STARTED</button> -->
 
   <div class="login-wrapper">
     <form class="login">
-      <section class="title">
+      <section cds-layout="m:lg" class="title">
         <!-- These could be heading elements. -->
         <div class="welcome">Create the Bot</div>
         <div class="hint">by filling below details</div>
@@ -23,11 +23,51 @@
           <input type="text" name="botDescription" clrInput placeholder="Enter one line bot description"
             [(ngModel)]="bot.description" />
         </clr-input-container>
-        <clr-input-container>
-          <label>Webpage Link</label>
-          <input type="url" name="sourceLink" clrInput placeholder="Enter the webpage link"
-            [(ngModel)]="bot.sourceLink" />
-        </clr-input-container>
+
+        <clr-radio-container clrInline>
+          <label>Select Data Source</label>
+          <clr-radio-wrapper>
+            <input type="radio" clrRadio name="dataSources" required value="WEB" [(ngModel)]="bot.dataSource" />
+            <label>Website Link</label>
+          </clr-radio-wrapper>
+          <clr-radio-wrapper>
+            <input type="radio" clrRadio name="dataSources" required value="CSV" [(ngModel)]="bot.dataSource" />
+            <label>CSV File</label>
+          </clr-radio-wrapper>
+          <clr-radio-wrapper>
+            <input type="radio" clrRadio name="dataSources" required value="TEXT" [(ngModel)]="bot.dataSource" />
+            <label>Text Data</label>
+          </clr-radio-wrapper>
+          <clr-control-helper>Data on which bot will answer queries.</clr-control-helper>
+        </clr-radio-container>
+
+        <ng-container *ngIf="bot.dataSource == 'CSV'">
+          <clr-input-container>
+            <label>CSV File</label>
+            <input type="file" name="csvFile" clrInput placeholder="Enter your bot name"
+              (change)="onFileSelected($event)" />
+          </clr-input-container>
+        </ng-container>
+
+        <ng-container *ngIf="bot.dataSource == 'TEXT'">
+          <clr-textarea-container>
+            <label>Text Data</label>
+            <textarea name="textData" rows="6" clrTextarea [(ngModel)]="bot.textData"></textarea>
+          </clr-textarea-container>
+
+        </ng-container>
+
+
+
+
+        <ng-container *ngIf="bot.dataSource == 'WEB'">
+
+          <clr-input-container>
+            <label>Webpage Link</label>
+            <input type="url" name="sourceLink" clrInput placeholder="Enter the webpage link"
+              [(ngModel)]="bot.sourceLink" />
+          </clr-input-container>
+        </ng-container>
         <clr-input-container>
           <label>OpenAI Key</label>
           <input type="text" name="openAiKey" clrInput placeholder="Enter your OpenAI API Key"
@@ -57,7 +97,7 @@
               <div class="alert-icon-wrapper">
                 <cds-icon class="alert-icon" shape="check-circle"></cds-icon>
               </div>
-              <span class="alert-text">Bot is sucessfully created. Bot is live at
+              <span class="bot-sucess-msg" class="alert-text">Bot is sucessfully created. Bot is live at
                 <a target="_blank" href="{{successBotLink}}">{{successBotLink}}</a>
               </span>
             </div>

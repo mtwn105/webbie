@@ -6,6 +6,7 @@ const fileUpload = require("express-fileupload");
 const axios = require("axios").default;
 const { v4: uuidv4 } = require("uuid");
 const prisma = require("./db");
+const fs = require("fs");
 
 require("dotenv").config();
 
@@ -33,10 +34,11 @@ app.use(helmet.xssFilter());
 
 // Create a bot
 app.post("/api/bot", async (req, res, next) => {
-  const { name, description, openAiKey, slackToken, sourceLink } = req.body;
+  const { name, description, openAiKey, slackToken, dataSource, sourceLink } =
+    req.body;
 
   // Validate all fields are not null and not empty
-  if (!name || !description || !openAiKey || !sourceLink) {
+  if (!name || !description || !openAiKey || !dataSource || !sourceLink) {
     return res.status(400).json({
       error: "All fields are required",
     });
@@ -54,9 +56,14 @@ app.post("/api/bot", async (req, res, next) => {
     openAiKey: openAiKey.trim(),
     slackToken: slackToken ? slackToken.trim() : "",
     sourceLink: sourceLink.trim(),
+    dataSource,
     botLink,
     botId,
   };
+
+  if (dataSource === "CSV" || dataSource === "TEXT") {
+    bot.sourceLink = `${process.env.SERVER_URL}/api/file/download/${sourceLink}`;
+  }
 
   // If bot name, api key and sourceLink already exists then return that bot
   const existingBot = await prisma.bot.findFirst({
@@ -91,7 +98,15 @@ app.post("/api/bot", async (req, res, next) => {
 
   // Save bot to database
   const savedBot = await prisma.bot.create({
-    data: bot,
+    data: {
+      name: bot.name,
+      description: bot.description,
+      openAiKey: bot.openAiKey,
+      slackToken: bot.slackToken,
+      sourceLink: bot.sourceLink,
+      botLink: bot.botLink,
+      botId: bot.botId,
+    },
   });
 
   // Return the response
@@ -230,6 +245,89 @@ app.post("/api/bot/question/:botId", async (req, res) => {
     return res.status(200).json({
       answer,
     });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
+// Upload File
+app.post("/api/file/upload", async (req, res) => {
+  try {
+    // Get file from request
+    const file = req.files.file;
+
+    // Validate file
+    if (!file) {
+      return res.status(400).json({
+        error: "File is required",
+      });
+    }
+
+    // Validate file type as csv or txt
+    if (file.mimetype !== "text/csv" && file.mimetype !== "text/plain") {
+      return res.status(400).json({
+        error: "File type is not supported",
+      });
+    }
+
+    // Validate file size
+    if (file.size > process.env.MAX_FILE_SIZE) {
+      return res.status(400).json({
+        error: "File size is too large",
+      });
+    }
+
+    const fileName =
+      uuidv4() + `.${file.mimetype === "text/csv" ? "csv" : "txt"}`;
+
+    // Save file to uploads folder
+    file.mv(`${__dirname}/uploads/${fileName}`, async (err) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({
+          error: "Something went wrong",
+        });
+      }
+
+      // Return the response
+      return res.status(200).json({
+        fileName,
+      });
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      error: "Something went wrong",
+    });
+  }
+});
+
+// Get File
+app.get("/api/file/download/:fileName", async (req, res) => {
+  try {
+    const { fileName } = req.params;
+
+    // Validate file name
+    if (!fileName) {
+      return res.status(400).json({
+        error: "File name is required",
+      });
+    }
+
+    // Validate file exists
+    if (!fs.existsSync(`${__dirname}/uploads/${fileName}`)) {
+      return res.status(404).json({
+        error: "File not found",
+      });
+    }
+
+    // Return the response
+    return res.status(200).download(`${__dirname}/uploads/${fileName}`);
   } catch (error) {
     console.log(error);
 
