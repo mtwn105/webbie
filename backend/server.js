@@ -222,7 +222,7 @@ app.post("/api/bot/question/:botId", async (req, res) => {
     const answer = modelPredictionResponse.data.data[0][0].trim();
 
     // Send slack notification in channel
-    if (bot.slackToken && bot.slackToken.length > 0) {
+    if (bot.slackChannel && bot.slackChannel.length > 0) {
       const message = `A Question was asked to the bot - \n\n${bot.name}: \n\nQuestion: ${question} \n\nAnswer: ${answer}`;
 
       await sendSlackMessageInChannel(bot, message);
