@@ -5,7 +5,7 @@
 
   <div class="login-wrapper">
     <form class="login">
-      <section class="title top-section">
+      <section class="title">
         <!-- These could be heading elements. -->
         <div class="welcome">Create the Bot</div>
         <div class="hint">by filling below details</div>
@@ -96,7 +96,7 @@
         <button [clrLoading]="validateBtnState" (click)="createBot()" class="btn btn-primary">Create the Bot</button>
 
       </div>
-      <section class="title bottom-section">
+      <section class="title">
         <div *ngIf="success" class="alert alert-success" role="alert">
           <div class="alert-items">
             <div class="alert-item static">
