@@ -95,7 +95,6 @@ app.post("/api/bot", async (req, res, next) => {
     data: {
       name: bot.name,
       description: bot.description,
-      slackToken: bot.slackToken,
       slackChannel: bot.slackChannel,
       sourceLink: bot.sourceLink,
       botLink: bot.botLink,
