@@ -73,25 +73,6 @@ app.post("/api/bot", async (req, res, next) => {
     bot.sourceLink = `${process.env.SERVER_URL}/api/file/download/${sourceLink}`;
   }
 
-  // If bot name, api key and sourceLink already exists then return that bot
-  const existingBot = await prisma.bot.findFirst({
-    where: {
-      name: bot.name,
-      openAiKey: bot.openAiKey,
-      sourceLink: bot.sourceLink,
-    },
-  });
-
-  if (existingBot) {
-    return res.status(200).json({
-      name: existingBot.name,
-      description: existingBot.description,
-      botId: existingBot.botId,
-      botLink: existingBot.botLink,
-      sourceLink: existingBot.sourceLink,
-    });
-  }
-
   const modelName = bot.name + "_" + bot.botId;
 
   // Create and Train the model
@@ -114,7 +95,6 @@ app.post("/api/bot", async (req, res, next) => {
     data: {
       name: bot.name,
       description: bot.description,
-      openAiKey: bot.openAiKey,
       slackToken: bot.slackToken,
       slackChannel: bot.slackChannel,
       sourceLink: bot.sourceLink,

@@ -15,7 +15,6 @@ model bot {
   botId        String   @unique
   name         String
   description  String
-  openAiKey    String
   slackToken   String
   slackChannel String
   sourceLink   String

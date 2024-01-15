@@ -5,7 +5,7 @@
 
   <div class="login-wrapper">
     <form class="login">
-      <section cds-layout="m:lg" class="title">
+      <section class="title top-section">
         <!-- These could be heading elements. -->
         <div class="welcome">Create the Bot</div>
         <div class="hint">by filling below details</div>
@@ -72,6 +72,7 @@
           <label>OpenAI Key</label>
           <input type="text" name="openAiKey" clrInput placeholder="Enter your OpenAI API Key"
             [(ngModel)]="bot.openAiKey" />
+          <clr-control-helper>API Key won't be saved in the database.</clr-control-helper>
         </clr-input-container>
         <!-- Check box to receive notifications on slack channel - enter slack token -->
 
@@ -95,7 +96,7 @@
         <button [clrLoading]="validateBtnState" (click)="createBot()" class="btn btn-primary">Create the Bot</button>
 
       </div>
-      <section class="title">
+      <section class="title bottom-section">
         <div *ngIf="success" class="alert alert-success" role="alert">
           <div class="alert-items">
             <div class="alert-item static">
