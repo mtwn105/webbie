@@ -16,8 +16,29 @@ Hey, In this day and age of AI, we all want an assistant that will solve our spe
 4. **Tools -** Leverages MindsDB for machine learning capabilities.
 5. **ML Engine -** Employs LlamaIndex and Langchain for robust machine learning.
 6. **Deployment -** Utilizes Docker for efficient deployment.
-   
-# Future Scope
+
+## Running on Local
+
+### Environment
+
+Add following environment variables:
+
+`APP_BASE_URL` - Application Base URL
+`SERVER_URL` - Server URL
+`MINDS_DB_URL` - MindsDB API URL 
+`DATABASE_URL` - PostgreSQL URL
+
+### Frontend
+Navigate to `client` folder.
+Run `npm install` to install node dependencies
+Run `ng s -o` to start Angular Application on port 4200
+
+### Backend
+Navigate to `backend` folder.
+Run `npm install` to install node dependencies
+Run `npm run dev` to start NodeJS Express Server on port 3000
+
+## Future Scope
 
 Several features can be incorporated in the future:
 
