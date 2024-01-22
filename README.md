@@ -1,5 +1,7 @@
 # Webbie - Create Bots from Your Data using MindsDB in minutes !
 
+![webbie](https://webbie.amitwani.dev/api/file/download/webbie.png)
+
 ## Introduction
 
 Hey, In this day and age of AI, we all want an assistant that will solve our specific problems. There have been many Large Language Models that solve generic problems and provide answers to them. But there's still a gap for tools where you can get answers just for your data. This is where the idea of Webbie comes in.
