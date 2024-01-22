@@ -6,7 +6,7 @@ Hey, In this day and age of AI, we all want an assistant that will solve our spe
 
 [**Webbie**](https://webbie.amitwani.dev) is a simple tool, where you can create an AI bot in minutes, based on your provided information. This chat-based interface is swiftly generated using MindsDB in the backend, offering a personalized solution to users' unique needs.
 
-![](https://cdn.hashnode.com/res/hashnode/image/upload/v1705325136257/b6a6a9db-ca0e-43db-a139-7dcc3eaf9f29.png align="center")
+![img](https://cdn.hashnode.com/res/hashnode/image/upload/v1705325136257/b6a6a9db-ca0e-43db-a139-7dcc3eaf9f29.png align="center")
 
 ## Tech Stack
 
