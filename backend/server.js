@@ -151,7 +151,7 @@ app.get("/api/bot/:botId", async (req, res) => {
 // Ask Question to the bot
 app.post("/api/bot/question/:botId", async (req, res) => {
   try {
-    const { question } = req.body;
+    let { question } = req.body;
     const { botId } = req.params;
 
     // Validate all fields are not null and not empty
@@ -176,6 +176,9 @@ app.post("/api/bot/question/:botId", async (req, res) => {
     }
 
     const modelName = bot.name + "_" + bot.botId;
+
+    // Remove quotes from question
+    question = question.replace(/'/g, "");
 
     // // Check if model exists or not
 
