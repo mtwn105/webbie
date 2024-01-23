@@ -363,9 +363,6 @@ app.listen(port, async () => {
 async function createModel(modelName, bot) {
   console.log("Starting Model Training");
 
-  // Drop Model
-  await dropModel(modelName);
-
   try {
     const modelCreationQuery = `CREATE MODEL ${modelName}
     PREDICT answer
