@@ -223,7 +223,7 @@ app.post("/api/bot/question/:botId", async (req, res) => {
 
     // Send slack notification in channel
     // if (bot.slackChannel && bot.slackChannel.length > 0) {
-    //   const message = `A Question was asked to the bot - \n\n${bot.name}: \n\nQuestion: ${question} \n\nAnswer: ${answer}`;
+    const message = `A Question was asked to the bot - \n\n${bot.name}: \n\nQuestion: ${question} \n\nAnswer: ${answer}`;
 
     //   await sendSlackMessageInChannel(bot, message);
     // }
@@ -235,7 +235,7 @@ app.post("/api/bot/question/:botId", async (req, res) => {
           question,
           answer,
           botId,
-          message: `A Question was asked to the bot - \n\n${bot.name}: \n\nQuestion: ${question} \n\nAnswer: ${answer}`,
+          message,
         },
       });
     } catch (error) {
