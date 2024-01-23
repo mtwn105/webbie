@@ -27,5 +27,6 @@ model transcript {
   botId     String
   question  String
   answer    String
+  message   String
   createdAt DateTime @default(now())
 }

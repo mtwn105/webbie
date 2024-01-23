@@ -222,11 +222,11 @@ app.post("/api/bot/question/:botId", async (req, res) => {
     const answer = modelPredictionResponse.data.data[0][0].trim();
 
     // Send slack notification in channel
-    if (bot.slackChannel && bot.slackChannel.length > 0) {
-      const message = `A Question was asked to the bot - \n\n${bot.name}: \n\nQuestion: ${question} \n\nAnswer: ${answer}`;
+    // if (bot.slackChannel && bot.slackChannel.length > 0) {
+    //   const message = `A Question was asked to the bot - \n\n${bot.name}: \n\nQuestion: ${question} \n\nAnswer: ${answer}`;
 
-      await sendSlackMessageInChannel(bot, message);
-    }
+    //   await sendSlackMessageInChannel(bot, message);
+    // }
 
     // save transcript
     try {
@@ -235,6 +235,7 @@ app.post("/api/bot/question/:botId", async (req, res) => {
           question,
           answer,
           botId,
+          message: `A Question was asked to the bot - \n\n${bot.name}: \n\nQuestion: ${question} \n\nAnswer: ${answer}`,
         },
       });
     } catch (error) {
@@ -453,7 +454,7 @@ async function dropModel(modelName) {
 }
 
 async function createSlack(bot) {
-  console.log("Creating Slack Connection");
+  console.log("Creating Slack Connection and Job for Notifications");
 
   try {
     const createSlackChannelQuery = `CREATE DATABASE slack_${bot.botId}
@@ -474,6 +475,23 @@ WITH
 
     console.log(createSlackResponse.data);
     console.log("Created Slack Successfully");
+    console.log("Creating notification Job");
+
+    const createJobQuery = `CREATE JOB job_${bot.botId} AS (
+      INSERT INTO slack_${bot.botId}.channels(channel, text)
+      SELECT
+          "${bot.slackChannel}" as channel,
+          message as text
+      FROM psql_datasource.transcript
+      WHERE createdAt > "{{PREVIOUS_START_DATETIME}}"
+      ) EVERY MINUTE;`;
+
+    const createJobResponse = await axios.post(`${process.env.MINDS_DB_URL}`, {
+      query: createJobQuery,
+    });
+
+    console.log(createJobResponse.data);
+    console.log("Created Notification Job Successfully");
   } catch (error) {
     console.log("Created Slack Failed");
     console.log(error);
