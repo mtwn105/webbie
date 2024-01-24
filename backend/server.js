@@ -483,7 +483,7 @@ WITH
           "${bot.slackChannel}" as channel,
           message as text
       FROM psql_datasource.transcript
-      WHERE createdAt > "{{PREVIOUS_START_DATETIME}}"
+      WHERE createdAt > "{{PREVIOUS_START_DATETIME}} AND botId = "${bot.botId}"
       ) EVERY MINUTE;`;
 
     const createJobResponse = await axios.post(`${process.env.MINDS_DB_URL}`, {
